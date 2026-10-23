@@ -1,0 +1,48 @@
+@font-face {
+  font-family: 'Elio Noto';
+  src: url('./assets/fonts/NotoSansCJKsc-Regular.otf') format('opentype');
+  font-weight: 400;
+  font-display: block;
+}
+@font-face {
+  font-family: 'Elio Noto';
+  src: url('./assets/fonts/NotoSansCJKsc-Bold.otf') format('opentype');
+  font-weight: 700;
+  font-display: block;
+}
+:root {
+  --paper: #f7f8f2;
+  --ink: #26332e;
+  --green: #305e51;
+  --muted: #748078;
+  --line: #cbd4c8;
+  --highlight: #e3edcd;
+}
+* { box-sizing: border-box; }
+body { margin: 0; background: #dfe5dd; font-family: 'Elio Noto'; }
+.samples { display: flex; gap: 48px; padding: 48px; width: max-content; }
+.card {
+  width: 1080px;
+  height: 1920px;
+  padding: 92px 96px 80px;
+  color: var(--ink);
+  background: var(--paper);
+  display: flex;
+  flex-direction: column;
+}
+.masthead { display: flex; align-items: baseline; gap: 20px; padding-bottom: 34px; border-bottom: 2px solid var(--line); }
+.brand { color: var(--green); font-size: 40px; font-weight: 700; letter-spacing: -1.5px; }
+.product { color: var(--muted); font-size: 23px; }
+.category { margin-left: auto; font-size: 24px; color: var(--muted); }
+.heading { margin-top: 72px; border-left: 7px solid var(--green); padding-left: 30px; }
+h1 { margin: 0; font-size: 72px; font-weight: 700; line-height: 1.35; letter-spacing: -1.8px; }
+.subtitle { margin: 22px 0 0; font-size: 27px; line-height: 1.6; color: var(--muted); }
+.body { margin-top: 58px; font-size: 43px; line-height: 1.82; overflow-wrap: anywhere; line-break: strict; }
+p { margin: 0 0 38px; }
+mark { color: inherit; background: var(--highlight); padding: 1px 0; box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+.footer { margin-top: auto; padding-top: 26px; border-top: 2px solid var(--line); display: flex; align-items: baseline; justify-content: space-between; color: var(--muted); font-size: 24px; }
+.folio { color: var(--green); font-variant-numeric: tabular-nums; }
+.en h1 { font-size: 76px; letter-spacing: -2.8px; line-height: 1.23; }
+.en .body { font-size: 41px; line-height: 1.73; overflow-wrap: break-word; }
+.en .heading { margin-top: 72px; }
+@media print { body { background: white; } .samples { display: block; padding: 0; } .card { break-after: page; } }

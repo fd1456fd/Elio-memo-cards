@@ -1,0 +1,7 @@
+node_modules/
+output/
+.elio-card-*/
+.env
+.env.*
+*.log
+.DS_Store

@@ -1,0 +1,18 @@
+{
+  "name": "elio-memo-cards",
+  "version": "0.1.0-preview.3",
+  "private": true,
+  "description": "Local text-to-card rendering with an independent memo design.",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "generate": "node cli.cjs",
+    "test": "node --test test/note.test.cjs test/paginate.test.cjs",
+    "test:render": "node --test test/render.test.cjs"
+  },
+  "dependencies": {
+    "playwright": "1.62.1"
+  },
+  "license": "MIT"
+}

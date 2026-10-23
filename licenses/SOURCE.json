@@ -1,0 +1,27 @@
+[
+  {
+    "file": "Apache-2.0.txt",
+    "upstream": "https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/LICENSE",
+    "sha256": "45873d00a0dd243596deb4aa23b2493b3d1f0671921bf2538ea431d7380220eb"
+  },
+  {
+    "file": "Playwright-NOTICE.txt",
+    "upstream": "https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/NOTICE",
+    "sha256": "6d602191187b35b9b01d2cffa01c8469c2c8d9de8a96f1bf868e0f264f51c81d"
+  },
+  {
+    "file": "Playwright-ThirdPartyNotices.txt",
+    "upstream": "https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/packages/playwright/ThirdPartyNotices.txt",
+    "sha256": "b17ac0bd6f4b8207e440639cc8e0ba1bf1d9eaf9b12236764ab93b346c7abd8e"
+  },
+  {
+    "file": "Playwright-core-ThirdPartyNotices.txt",
+    "upstream": "https://raw.githubusercontent.com/microsoft/playwright/v1.62.1/packages/playwright-core/ThirdPartyNotices.txt",
+    "sha256": "a549d329bad8806fe279f0ecae0fc0270dec7e7c2dc8ec10f90e394f7c32b144"
+  },
+  {
+    "file": "fsevents-MIT.txt",
+    "upstream": "https://raw.githubusercontent.com/fsevents/fsevents/v2.3.2/LICENSE",
+    "sha256": "2a8a5d6197bb97a018b8a190dd3ed853d750ca87c8e80c17aad41d6c6ff448e1"
+  }
+]
