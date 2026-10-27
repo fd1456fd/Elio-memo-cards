@@ -3,8 +3,8 @@
 const {parseArgs} = require('node:util');
 const {render} = require('./src/render.cjs');
 (async () => {
-  const {values} = parseArgs({options: {input: {type: 'string'}, output: {type: 'string'}, help: {type: 'boolean'}, mode: {type: 'string', default: 'auto'}}});
-  if (values.help) { console.log('node cli.cjs --input note.json|note.md --output new-directory [--mode auto|locked]'); return; }
-  if (!values.input || !values.output) throw new Error('Usage: node cli.cjs --input note.json|note.md --output new-directory [--mode auto|locked]');
-  console.log(JSON.stringify(await render(values.input, values.output, {mode: values.mode}), null, 2));
+  const {values} = parseArgs({options: {input: {type: 'string'}, output: {type: 'string'}, delivery: {type: 'string'}, help: {type: 'boolean'}, mode: {type: 'string', default: 'auto'}}});
+  if (values.help) { console.log('node cli.cjs --input note.json|note.md --output new-directory [--mode auto|locked] [--delivery new-png-directory]'); return; }
+  if (!values.input || !values.output) throw new Error('Usage: node cli.cjs --input note.json|note.md --output new-directory [--mode auto|locked] [--delivery new-png-directory]');
+  console.log(JSON.stringify(await render(values.input, values.output, {mode: values.mode, delivery: values.delivery}), null, 2));
 })().catch(error => { console.error(error.message); process.exitCode = 1; });

@@ -22,3 +22,14 @@ test('a layout too small for even one grapheme is rejected',async()=>{
 test('a body that already fits remains a single exact range',async()=>{
  assert.deepEqual(await paginateText('One note.','en',fits(100)),[{start:0,end:9}]);
 });
+
+
+test('chapter groups move together and oversized groups fail explicitly',async()=>{
+ const body='Intro.\n\nHeading\n\nFirst paragraph.\n\nEnd.';
+ const start=body.indexOf('Heading'),end=body.indexOf('\n\nEnd.');
+ const pages=await paginateText(body,'en',fits(30),{keepTogether:[{start,end}]});
+ assert(pages.length>1);
+ assert(!pages.some(p=>p.end>start&&p.end<end));
+ assert.equal(pages.map(p=>body.slice(p.start,p.end)).join(''),body);
+ await assert.rejects(paginateText(body,'en',fits(10),{keepTogether:[{start,end}]}),/chapter/i);
+});

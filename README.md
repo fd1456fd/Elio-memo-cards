@@ -2,7 +2,7 @@
 
 把自己的长短文生成独立设计的便笺卡片，输出1080×1920 PNG、可离线打开的HTML与联排预览。
 
-当前版本 `0.1.0-preview.3`：支持长文自动分页、跨页高亮和固定分页检查。不缩字、不裁掉正文。这是首个公开预览候选，当前只验证了下文列出的环境。
+当前版本 `0.1.0-preview.4`：支持长文自动分页、跨页高亮、固定分页检查、可选章节标题和独立纯 PNG 交付目录。不缩字、不裁掉正文。当前只验证了下文列出的环境。
 
 ![自动分页示例](docs/example-preview.png)
 
@@ -26,6 +26,19 @@ npm run generate -- --input examples/long-zh.json --output output/long
 ```
 
 输出目录必须不存在，避免覆盖文件。先看 `index.html` 或 `preview.png` 联排；单页沿用 `card.png/card.html`，多页为 `card-001.png/card-001.html` 等。`render-check.json` 记录页数、源块ID、字符范围、字体和正文/高亮检查。HTML连同同目录的CSS及assets一起移动后仍可使用，不要只移动HTML。
+
+## 章节与纯 PNG 交付
+
+```sh
+npm run generate -- --input examples/chapters-zh.json --output output/chapters-zh --delivery delivery/chapters-zh
+npm run generate -- --input examples/chapters-en.json --output output/chapters-en --delivery delivery/chapters-en
+```
+
+`--output`保留完整制作资料；可选的`--delivery`只输出`001.png`、`002.png`等编号图片，与制作输出中的 PNG 逐文件相同。两个目录必须都是新目录，不能相同或互相包含；不覆盖已有文件。分享图片时可以只使用交付目录。
+
+JSON可添加`chapterHeadings`字符串数组。每个标题须是正文中唯一、独占一段的完整原文，并有后续正文段落。标题与后面第一个非空段落作为一组保留；放不下时整体移到后页，整组超过一页则报错，不缩字、不拆标题。章节可以在同页继续，仍按顺序分页，不做页数或密度的全局优化。重复、缺失、末尾无正文或连续的章节标题会报错。`pages`输入中的标题列表放在各源块内。
+
+未声明的段落仍按普通正文处理；标题文字可同时出现在`highlights`中。高亮只使用输入指定的原句，不按数量或分布自动补充、删除或替换。检查通过说明指定文字被正确呈现，不评价选句是否重要。未指定高亮时不会自行选择。
 
 ## 文案格式
 
@@ -77,7 +90,7 @@ npm run test:render
 
 已安装开源Chromium时，可用 `ELIO_CHROMIUM` 指向其可执行文件；默认使用Playwright安装的Chromium。字体固定为本地Noto Sans CJK SC，Regular/Bold，Sans2.004。来源与哈希见 `assets/fonts/SOURCE.json`，OFL许可见 `assets/fonts/LICENSE.txt`。生成时检查实际字体；遇到需要额外系统字体的字符（例如部分emoji）会报错，不静默调用系统字体。
 
-程序不会调用模型API、远程字体或上传服务。生成输出包含用户输入的正文，不应将个人生成目录随源码公开；`output/`已排除在Git之外。此前的静态设计样张仍保留在 `sample.html`。
+程序不会调用模型API、远程字体或上传服务。生成输出包含用户输入的正文，不应将个人生成目录随源码公开；`output/`和`delivery/`已排除在Git之外。使用其他自定义目录时也请自行排除。此前的静态设计样张仍保留在 `sample.html`。
 
 ## 许可证与来源
 

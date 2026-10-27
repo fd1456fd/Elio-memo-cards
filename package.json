@@ -1,6 +1,6 @@
 {
   "name": "elio-memo-cards",
-  "version": "0.1.0-preview.3",
+  "version": "0.1.0-preview.4",
   "private": true,
   "description": "Local text-to-card rendering with an independent memo design.",
   "engines": {

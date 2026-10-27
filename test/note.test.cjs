@@ -41,3 +41,17 @@ test('explicit source pages preserve their identity and reject mixed input',()=>
  assert.deepEqual(note.blocks.map(b=>b.id),['first','second']);
  assert.throws(()=>readNote(JSON.stringify({title:'Note',body:'A',pages:[{body:'B'}]}),'.json'),/body or pages/i);
 });
+
+
+test('chapter headings are whole unique paragraphs with following content',()=>{
+ const body='Opening.\n\nA chapter\n\nThe first paragraph.\n\nClosing.';
+ const note=readNote(JSON.stringify({title:'Note',language:'en',body,chapterHeadings:['A chapter'],highlights:['A chapter']}),'.json');
+ const html=noteHTML(note);
+ assert(html.includes('<p class="chapter" role="heading" aria-level="2"><mark>A chapter</mark></p>'));
+ assert.equal(note.blocks[0].chapterRanges.length,1);
+ for(const headings of [['missing'],['Opening'],['Closing.'],['A chapter','A chapter'],['A\nchapter']]){
+  assert.throws(()=>readNote(JSON.stringify({title:'Note',body,chapterHeadings:headings}),'.json'),/chapter/i);
+ }
+ assert.throws(()=>readNote(JSON.stringify({title:'Note',body:'Heading\n\nText\n\nHeading\n\nText',chapterHeadings:['Heading']}),'.json'),/chapter/i);
+ assert.throws(()=>readNote(JSON.stringify({title:'Note',pages:[{body:'Text'}],chapterHeadings:['Text']}),'.json'),/chapter/i);
+});

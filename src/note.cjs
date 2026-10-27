@@ -2,6 +2,30 @@
 
 const normalize = text => text.replaceAll('\r\n', '\n').replaceAll('\r', '\n');
 
+function chapterRanges(body, declarations = []) {
+  if (!Array.isArray(declarations)) throw new Error('chapterHeadings must be an array');
+  const paragraphs = [];
+  let cursor = 0;
+  for (const text of body.split('\n\n')) {
+    paragraphs.push({text, start: cursor, end: cursor + text.length});
+    cursor += text.length + 2;
+  }
+  const seen = new Set();
+  const ranges = declarations.map(heading => {
+    if (typeof heading !== 'string' || !heading.trim() || /[\r\n]/.test(heading) || seen.has(heading)) {
+      throw new Error('Each chapter heading must be distinct non-empty single-line text');
+    }
+    seen.add(heading);
+    const matches = paragraphs.filter(p => p.text === heading);
+    if (matches.length !== 1) throw new Error('Chapter heading must match one unique whole paragraph');
+    const paragraph = matches[0];
+    const following = paragraphs.slice(paragraphs.indexOf(paragraph) + 1).find(p => p.text.trim());
+    if (!following || declarations.includes(following.text)) throw new Error('Chapter heading needs a following content paragraph');
+    return {start: paragraph.start, end: paragraph.end, keepUntil: following.end};
+  });
+  return ranges.sort((a, b) => a.start - b.start);
+}
+
 function readBlock(value, id) {
   if (!value || typeof value.body !== 'string' || !value.body.trim()) throw new Error('Non-empty body required');
   const body = normalize(value.body);
@@ -18,7 +42,7 @@ function readBlock(value, id) {
   for (let i = 1; i < selections.length; i++) {
     if (selections[i].from < selections[i - 1].to) throw new Error('Highlights overlap');
   }
-  return {id, body, selections};
+  return {id, body, selections, chapterRanges: chapterRanges(body, value.chapterHeadings)};
 }
 
 function readNote(source, extension) {
@@ -43,6 +67,7 @@ function readNote(source, extension) {
   if (value.pages !== undefined) {
     if (!Array.isArray(value.pages) || !value.pages.length) throw new Error('pages must be a non-empty array');
     if (value.highlights !== undefined) throw new Error('Place highlights inside each source page');
+    if (value.chapterHeadings !== undefined) throw new Error('Place chapterHeadings inside each source page');
     note.blocks = value.pages.map((block, i) => {
       const id = block?.id ?? String(i + 1);
       if (typeof id !== 'string' || !id.trim()) throw new Error('Source page id must be non-empty text');
@@ -51,7 +76,7 @@ function readNote(source, extension) {
     if (new Set(note.blocks.map(b => b.id)).size !== note.blocks.length) throw new Error('Source page ids must be unique');
   } else note.blocks = [readBlock(value, 'source')];
   // The single-body form remains convenient for callers producing one card.
-  if (note.blocks.length === 1) Object.assign(note, {body: note.blocks[0].body, selections: note.blocks[0].selections});
+  if (note.blocks.length === 1) Object.assign(note, {body: note.blocks[0].body, selections: note.blocks[0].selections, chapterRanges: note.blocks[0].chapterRanges});
   return note;
 }
 
@@ -82,7 +107,9 @@ function bodyHTML(note, start = 0, end = note.body.length) {
       rendered += `<mark>${escapeHTML(note.body.slice(range.from, range.to))}</mark>`;
       position = range.to;
     }
-    return `<p>${rendered}${escapeHTML(note.body.slice(position, paragraph.end))}</p>`;
+    const chapter = (note.chapterRanges ?? []).some(range => range.start === paragraph.start && range.end === paragraph.end);
+    const attributes = chapter ? ' class="chapter" role="heading" aria-level="2"' : '';
+    return `<p${attributes}>${rendered}${escapeHTML(note.body.slice(position, paragraph.end))}</p>`;
   }).join('');
 }
 

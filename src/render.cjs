@@ -6,6 +6,7 @@ const {chromium} = require('playwright');
 const {readNote, noteHTML, bodyHTML, escapeHTML} = require('./note.cjs');
 const {paginateText} = require('./paginate.cjs');
 const root = path.resolve(__dirname, '..');
+const {version} = require('../package.json');
 
 async function inspectCard(page) {
   return page.locator('.card').evaluate(card => {
@@ -53,15 +54,39 @@ function indexHTML(title, records) {
 <h1>${escapeHTML(title)}</h1><p>${records.length} · 1080 × 1920</p><main class="grid">${records.map(r => `<a href="${r.html}"><img src="${r.png}" alt="${r.page}"><span>${r.page} / ${records.length}</span></a>`).join('')}</main></html>`;
 }
 
-async function render(inputPath, outputPath, {mode = 'auto'} = {}) {
+async function destinationPath(value) {
+  let parent = path.resolve(value);
+  const suffix = [];
+  while (true) {
+    try { return path.join(await fs.realpath(parent), ...suffix); }
+    catch (error) {
+      if (error.code !== 'ENOENT') throw error;
+      suffix.unshift(path.basename(parent));
+      parent = path.dirname(parent);
+    }
+  }
+}
+
+async function requireNewDirectory(directory) {
+  try { await fs.lstat(directory); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  throw new Error('Output or delivery already exists; choose a new directory');
+}
+
+async function render(inputPath, outputPath, {mode = 'auto', delivery} = {}) {
   if (!['auto', 'locked'].includes(mode)) throw new Error('mode must be auto or locked');
-  const input = path.resolve(inputPath), output = path.resolve(outputPath);
-  try { await fs.lstat(output); throw new Error('Output already exists; choose a new directory'); }
-  catch (error) { if (error.code !== 'ENOENT') throw error; }
+  const input = path.resolve(inputPath), output = await destinationPath(outputPath);
+  const deliveryPath = delivery === undefined ? undefined : await destinationPath(delivery);
+  if (deliveryPath && (deliveryPath === output || deliveryPath.startsWith(output + path.sep) || output.startsWith(deliveryPath + path.sep))) {
+    throw new Error('Working and delivery directories must not overlap');
+  }
+  await requireNewDirectory(output);
+  if (deliveryPath) await requireNewDirectory(deliveryPath);
   const note = readNote(await fs.readFile(input, 'utf8'), path.extname(input).toLowerCase());
   await fs.mkdir(path.dirname(output), {recursive: true});
   const stage = await fs.mkdtemp(path.join(path.dirname(output), '.elio-card-'));
   let browser;
+  let outputCreated = false, deliveryCreated = false, published = false;
   try {
     await fs.cp(path.join(root, 'assets/fonts'), path.join(stage, 'assets/fonts'), {recursive: true});
     const css = await fs.readFile(path.join(root, 'sample.css'), 'utf8');
@@ -87,7 +112,7 @@ async function render(inputPath, outputPath, {mode = 'auto'} = {}) {
       if (mode === 'locked') {
         if (!await fits(0, block.body.length)) throw new Error(`Locked source page overflows: ${block.id}`);
         ranges = [{start: 0, end: block.body.length}];
-      } else ranges = await paginateText(block.body, note.language, fits);
+      } else ranges = await paginateText(block.body, note.language, fits, {keepTogether: block.chapterRanges.map(range => ({start: range.start, end: range.keepUntil}))});
       planned.push(...ranges.map(range => ({...range, block})));
     }
     const records = [];
@@ -129,16 +154,29 @@ async function render(inputPath, outputPath, {mode = 'auto'} = {}) {
     await page.locator('img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
     await page.screenshot({path: path.join(stage, 'preview.png'), fullPage: true});
     if (remoteRequests.length) throw new Error('Unexpected remote resource request');
-    const report = {version: '0.1.0-preview.3', mode, language: note.language, browser: browser.version(), width: 1080, height: 1920, pages: records.length, textPreserved: true, highlightsPreserved: true, remoteRequests: 0, records};
+    const report = {version, mode, language: note.language, browser: browser.version(), width: 1080, height: 1920, pages: records.length, textPreserved: true, highlightsPreserved: true, remoteRequests: 0, records};
     await fs.writeFile(path.join(stage, 'render-check.json'), JSON.stringify(report, null, 2) + '\n');
     await browser.close(); browser = undefined;
-    await fs.mkdir(output);
-    try {
-      for (const name of await fs.readdir(stage)) await fs.rename(path.join(stage, name), path.join(output, name));
-    } catch (error) { await fs.rm(output, {recursive: true, force: true}); throw error; }
+    if (deliveryPath) {
+      await fs.mkdir(path.dirname(deliveryPath), {recursive: true});
+      await fs.mkdir(deliveryPath); deliveryCreated = true;
+    }
+    await fs.mkdir(output); outputCreated = true;
+    for (const name of await fs.readdir(stage)) await fs.rename(path.join(stage, name), path.join(output, name));
+    if (deliveryPath) {
+      for (const record of records) {
+        const filename = String(record.page).padStart(3, '0') + '.png';
+        await fs.copyFile(path.join(output, record.png), path.join(deliveryPath, filename), require('node:fs').constants.COPYFILE_EXCL);
+      }
+    }
+    published = true;
     return report;
   } finally {
     if (browser) await browser.close();
+    if (!published) {
+      if (outputCreated) await fs.rm(output, {recursive: true, force: true});
+      if (deliveryCreated) await fs.rm(deliveryPath, {recursive: true, force: true});
+    }
     await fs.rm(stage, {recursive: true, force: true});
   }
 }

@@ -46,3 +46,5 @@ mark { color: inherit; background: var(--highlight); padding: 1px 0; box-decorat
 .en .body { font-size: 41px; line-height: 1.73; overflow-wrap: break-word; }
 .en .heading { margin-top: 72px; }
 @media print { body { background: white; } .samples { display: block; padding: 0; } .card { break-after: page; } }
+
+.body p.chapter { font-size: 48px; font-weight: 700; line-height: 1.5; }

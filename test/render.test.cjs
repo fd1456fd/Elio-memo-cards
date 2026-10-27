@@ -95,3 +95,49 @@ test('a character requiring an unbundled system font is rejected explicitly',asy
   assert.deepEqual(await fs.readdir(temp),['emoji.json']);
  } finally {await fs.rm(temp,{recursive:true,force:true})}
 });
+
+
+test('chapter rendering and separate PNG delivery preserve both languages',async()=>{
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'elio-delivery-test-'));
+ try {
+  for(const language of ['zh','en']){
+   const heading=language==='zh'?'河边观察':'By the river';
+   const paragraph=language==='zh'?'记录水面的光。':'Record the light on the water.';
+   const body=(paragraph+'\n\n').repeat(14)+heading+'\n\n'+paragraph+'\n\n'+(paragraph+'\n\n').repeat(9);
+   const input=path.join(temp,language+'.json'),output=path.join(temp,language),delivery=path.join(temp,language+'-png');
+   await fs.writeFile(input,JSON.stringify({title:'Field notes',language,body,chapterHeadings:[heading],highlights:[body]}));
+   const report=await render(input,output,{delivery});
+   assert(report.pages>1);assert.equal(report.textPreserved,true);assert.equal(report.highlightsPreserved,true);
+   const files=(await fs.readdir(delivery)).sort();
+   assert.deepEqual(files,report.records.map((r,i)=>String(i+1).padStart(3,'0')+'.png'));
+   for(let i=0;i<files.length;i++)assert.deepEqual(await fs.readFile(path.join(delivery,files[i])),await fs.readFile(path.join(output,report.records[i].png)));
+   const offset=body.indexOf(heading),end=offset+heading.length+2+paragraph.length;
+   assert(!report.records.some(r=>r.end>offset&&r.end<end));
+   const record=report.records.find(r=>r.start<=offset&&r.end>=end);
+   assert((await fs.readFile(path.join(output,record.html),'utf8')).includes('class="chapter"'));
+   assert((await fs.stat(path.join(output,'render-check.json'))).size>0);
+  }
+ } finally {await fs.rm(temp,{recursive:true,force:true})}
+});
+test('delivery refuses existing or overlapping destinations without changing files',async()=>{
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'elio-delivery-guard-'));
+ try {
+  const input=path.join(__dirname,'../examples/en.json'),output=path.join(temp,'work'),delivery=path.join(temp,'delivery');
+  await fs.mkdir(delivery);await fs.writeFile(path.join(delivery,'keep.txt'),'keep');
+  await assert.rejects(render(input,output,{delivery}),/already exists/i);
+  assert.equal(await fs.readFile(path.join(delivery,'keep.txt'),'utf8'),'keep');
+  await assert.rejects(fs.stat(output),{code:'ENOENT'});
+  for(const target of [output,path.join(output,'png'),temp])await assert.rejects(render(input,output,{delivery:target}),/overlap|already exists/i);
+  const alias=path.join(temp,'alias');await fs.symlink(temp,alias);
+  await assert.rejects(render(input,output,{delivery:path.join(alias,'work','png')}),/overlap/i);
+ } finally {await fs.rm(temp,{recursive:true,force:true})}
+});
+test('an oversized heading group leaves neither working nor delivery output',async()=>{
+ const temp=await fs.mkdtemp(path.join(os.tmpdir(),'elio-chapter-overflow-'));
+ try {
+  const input=path.join(temp,'note.json'),output=path.join(temp,'work'),delivery=path.join(temp,'png');
+  await fs.writeFile(input,JSON.stringify({title:'Note',language:'en',body:'Heading\n\n'+('Text '.repeat(1500)),chapterHeadings:['Heading']}));
+  await assert.rejects(render(input,output,{delivery}),/chapter/i);
+  assert.deepEqual(await fs.readdir(temp),['note.json']);
+ } finally {await fs.rm(temp,{recursive:true,force:true})}
+});
