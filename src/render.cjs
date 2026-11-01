@@ -1,5 +1,7 @@
 'use strict';
 const fs = require('node:fs/promises');
+const {createHash} = require('node:crypto');
+const sha256 = data => createHash('sha256').update(data).digest('hex');
 const path = require('node:path');
 const {pathToFileURL} = require('node:url');
 const {chromium} = require('playwright');
@@ -82,7 +84,8 @@ async function render(inputPath, outputPath, {mode = 'auto', delivery} = {}) {
   }
   await requireNewDirectory(output);
   if (deliveryPath) await requireNewDirectory(deliveryPath);
-  const note = readNote(await fs.readFile(input, 'utf8'), path.extname(input).toLowerCase());
+  const source = await fs.readFile(input);
+  const note = readNote(source.toString('utf8'), path.extname(input).toLowerCase());
   await fs.mkdir(path.dirname(output), {recursive: true});
   const stage = await fs.mkdtemp(path.join(path.dirname(output), '.elio-card-'));
   let browser;
@@ -138,7 +141,9 @@ async function render(inputPath, outputPath, {mode = 'auto', delivery} = {}) {
       received.get(block.id).highlights += layout.highlights.join('');
       await page.locator('.card').screenshot({path: path.join(stage, png)});
       const {body, highlights, ...metrics} = layout;
-      records.push({page: i + 1, sourceId: block.id, start, end, html, png, fontFamilies, ...metrics});
+      const htmlSha256 = sha256(await fs.readFile(path.join(stage, html)));
+      const pngSha256 = sha256(await fs.readFile(path.join(stage, png)));
+      records.push({htmlSha256, pngSha256, page: i + 1, sourceId: block.id, start, end, html, png, fontFamilies, ...metrics});
     }
     for (const block of note.blocks) {
       const actual = received.get(block.id);
@@ -154,7 +159,7 @@ async function render(inputPath, outputPath, {mode = 'auto', delivery} = {}) {
     await page.locator('img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
     await page.screenshot({path: path.join(stage, 'preview.png'), fullPage: true});
     if (remoteRequests.length) throw new Error('Unexpected remote resource request');
-    const report = {version, mode, language: note.language, browser: browser.version(), width: 1080, height: 1920, pages: records.length, textPreserved: true, highlightsPreserved: true, remoteRequests: 0, records};
+    const report = {version, validationScope: 'layout-and-text-only', editorialReview: 'not-performed', sourceSha256: sha256(source), mode, language: note.language, browser: browser.version(), width: 1080, height: 1920, pages: records.length, textPreserved: true, highlightsPreserved: true, remoteRequests: 0, records};
     await fs.writeFile(path.join(stage, 'render-check.json'), JSON.stringify(report, null, 2) + '\n');
     await browser.close(); browser = undefined;
     if (deliveryPath) {

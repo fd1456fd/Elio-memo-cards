@@ -6,6 +6,8 @@ const path=require('node:path');
 const {pathToFileURL}=require('node:url');
 const {render}=require('../src/render.cjs');
 const {chromium}=require('playwright');
+const {createHash}=require('node:crypto');
+const sha=data=>createHash('sha256').update(data).digest('hex');
 
 test('Chinese and English notes render, preserve text, and remain portable',async()=>{
  const temp=await fs.mkdtemp(path.join(os.tmpdir(),'elio-render-test-'));
@@ -14,6 +16,13 @@ test('Chinese and English notes render, preserve text, and remain portable',asyn
    const destination=path.join(temp,lang);
    const report=await render(path.join(__dirname,'../examples',lang+'.json'),destination);
    assert.equal(report.textPreserved,true);assert.equal(report.highlightsPreserved,true);
+   assert.equal(report.validationScope,'layout-and-text-only');
+   assert.equal(report.editorialReview,'not-performed');
+   assert.equal(report.sourceSha256,sha(await fs.readFile(path.join(__dirname,'../examples',lang+'.json'))));
+   for(const record of report.records){
+    assert.equal(record.pngSha256,sha(await fs.readFile(path.join(destination,record.png))));
+    assert.equal(record.htmlSha256,sha(await fs.readFile(path.join(destination,record.html))));
+   }
    const png=await fs.readFile(path.join(destination,'card.png'));
    assert.equal(png.readUInt32BE(16),1080);assert.equal(png.readUInt32BE(20),1920);
   }
